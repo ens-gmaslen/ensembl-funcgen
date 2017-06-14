@@ -181,6 +181,6 @@ sub read_all_overlaps {
     } else {
       print "Not compatible $current_bed_file_line\n";
     }
-
+  }
   return( /@all_overlaps );
 }
