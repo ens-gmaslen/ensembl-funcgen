@@ -131,7 +131,7 @@ sub filter_for_compatible_overlaps {
     my $regulatory_feature_type_new  = $overlap->[9];
     my $overlap_length               = $overlap->[12];
     
-    if( (! exists ($overlaps_length{$regulatory_feature_type_old}) && $regulatory_feature_type_old eq $regulatory_feature_type_new) {
+    if( (! exists ($overlaps_length{$regulatory_feature_type_old}) ) && $regulatory_feature_type_old eq $regulatory_feature_type_new) {
       
       print "Compatible     $current_bed_file_line\n";
       push @overlaps, \@bed_file_fields;
