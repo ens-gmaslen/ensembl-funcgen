@@ -4,7 +4,11 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 use Getopt::Long;
 
-my %options;
+my $all_overlaps;
+my $old_regulatory_features;
+my $new_regulatory_features;
+my $outfile;
+my $stable_id_prefix;
 
 GetOptions (
   'all_overlaps=s'             => \$all_overlaps,
@@ -13,11 +17,6 @@ GetOptions (
   'outfile=s'                  => \$outfile,
   'stable_id_prefix=s'         => \$stable_id_prefix,
 );
-
-#my $all_overlaps            = $options{all_overlaps};
-#my $new_regulatory_features = $options{new_regulatory_features};
-#my $outfile                 = $options{outfile};
-#my $stable_id_prefix        = $options{stable_id_prefix};
 
 open my $old_regulatory_features_fh, '<', $old_regulatory_features;
 
