@@ -132,7 +132,7 @@ sub filter_for_compatible_overlaps {
     if( ! exists ($overlaps_length{$regulatory_feature_type_old}) ) {
       push @overlaps, $overlap;
       $overlaps_length{$regulatory_feature_type_old} = $overlap_length;
-    } elsif ( $overlaps_length{$regulatory_feature_type_old} lt $overlap_length)
+    } elsif ( $overlaps_length{$regulatory_feature_type_old} lt $overlap_length) {
       print "ERROR: The new entry has a longer overlap than the one already reported.\n";
     }
   }
