@@ -7,24 +7,25 @@ use Getopt::Long;
 my %options;
 
 GetOptions (
-  \%options,
-  "all_overlaps=s",
-  "new_regulatory_features=s",
-  "outfile=s",
-  "stable_id_prefix=s",
+  'all_overlaps=s'             => \$all_overlaps,
+  'old_regulatory_features=s'  => \$old_regulatory_features,
+  'new_regulatory_features=s'  => \$new_regulatory_features,
+  'outfile=s'                  => \$outfile,
+  'stable_id_prefix=s'         => \$stable_id_prefix,
 );
 
-my $all_overlaps            = $options{all_overlaps};
-my $new_regulatory_features = $options{new_regulatory_features};
-my $outfile                 = $options{outfile};
-my $stable_id_prefix        = $options{stable_id_prefix};
+#my $all_overlaps            = $options{all_overlaps};
+#my $new_regulatory_features = $options{new_regulatory_features};
+#my $outfile                 = $options{outfile};
+#my $stable_id_prefix        = $options{stable_id_prefix};
+
+open my $old_regulatory_features_fh, '<', $old_regulatory_features;
+
+my $max_seen_stable_id_number = find_max_seen_stable_id($old_regulatory_features_fh);
 
 open my $all_overlaps_fh, '<', $all_overlaps;
 
-my $overlaps;
-my $max_seen_stable_id_number;
-
-($overlaps, $max_seen_stable_id_number) = filter_for_compatible_overlaps($all_overlaps_fh);
+my $overlaps = filter_for_compatible_overlaps($all_overlaps_fh);
 
 (
   my $stable_id_hash,
@@ -116,31 +117,67 @@ sub filter_for_compatible_overlaps {
 
   my $bedfile_fh = shift;
 
-  my $max_seen_stable_id_number = 0;
   my @overlaps;
+  my %overlaps_length;
 
-  while (my $current_bed_file_line = <$bedfile_fh>) {
+  my $all_overlaps = read_all_overlaps($bedfile_fh);
 
-    chomp $current_bed_file_line;
-    my @bed_file_fields = split "\t", $current_bed_file_line;
+  sub cmp_overlaps {
+      return $b->[12] <=> $a->[12];
+  }
     
-    # Feature types must be identical for transferring the stable id.
-    #
-    my $regulatory_feature_type_old             = $bed_file_fields[3];
-    my $regulatory_feature_old_stable_id_number = $bed_file_fields[4];
-    my $regulatory_feature_type_new             = $bed_file_fields[9];
+  foreach my $overlap (sort cmp_overlaps @{$all_overlaps}) {
+  
+    my $regulatory_feature_type_old  = $overlap->[3];
+    my $regulatory_feature_type_new  = $overlap->[9];
+    my $overlap_length               = $overlap->[12];
     
-    if ($regulatory_feature_type_old eq $regulatory_feature_type_new) {
+    if( (! exists ($overlaps_length{$regulatory_feature_type_old}) && $regulatory_feature_type_old eq $regulatory_feature_type_new) {
+      
       print "Compatible     $current_bed_file_line\n";
       push @overlaps, \@bed_file_fields;
+      $overlaps_length{$regulatory_feature_type_old} = $overlap_length;
     } else {
       print "Not compatible $current_bed_file_line\n";
     }
+  }
+  return ( \@overlaps );
+}
 
-    # Look for maximum ID number among the old features
+sub find_max_seen_stable_id {
+    
+  my $bedfile_fh = shift;
+    
+  my $max_seen_stable_id_number;
+    
+  while (my $current_bed_file_line = <$bedfile_fh>) {
+      
+    chomp $current_bed_file_line;
+    my @bed_file_fields = split "\t", $current_bed_file_line;
+      
+    my $regulatory_feature_old_stable_id_number = $bed_file_fields[4];
+    
+      # Look for maximum ID number among the old features
     if ($max_seen_stable_id_number < $regulatory_feature_old_stable_id_number) {
-      $max_seen_stable_id_number = $regulatory_feature_old_stable_id_number;
+        $max_seen_stable_id_number = $regulatory_feature_old_stable_id_number;
     }
   }
-  return (  \@overlaps, $max_seen_stable_id_number );
+  return( $max_seen_stable_id_number );
+}
+
+sub read_all_overlaps {
+  my $bedfile_fh = shift;
+    
+  my @all_overlaps;
+
+  while (my $current_bed_file_line = <$bedfile_fh>) {
+        
+  chomp $current_bed_file_line;
+  my @bed_file_fields = split "\t", $current_bed_file_line;
+        
+  # Feature types must be identical for transferring the stable id.
+  #
+  push @all_overlaps, \@bed_file_fields;
+
+  return(/@all_overlaps);
 }
