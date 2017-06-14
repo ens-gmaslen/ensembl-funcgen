@@ -21,16 +21,17 @@ GetOptions (
 open my $old_regulatory_features_fh, '<', $old_regulatory_features;
 
 my $max_seen_stable_id_number = find_max_seen_stable_id($old_regulatory_features_fh);
+$old_regulatory_features_fh->close();
 
 open my $all_overlaps_fh, '<', $all_overlaps;
 
 my $overlaps = filter_for_compatible_overlaps($all_overlaps_fh);
+$all_overlaps_fh->close();
 
 (
   my $stable_id_hash,
   my $num_mapped_stable_ids,
-  my $num_new_stable_ids
-  
+  my $num_new_stable_ids  
 )= generate_stable_id_assignments(
   $stable_id_prefix, 
   $overlaps, 
@@ -84,7 +85,9 @@ sub generate_stable_id_assignments {
   while (my $line = <$in>) {
     chomp $line;
     my @items = split "\t", $line;
-    
+   
+    #print "Compatible $line\n";
+ 
     # This is the name of the feature in the bed file. e.g.: tfbs_2, ctcf_1, 
     # dnase_2, dnase_3, tfbs_3, tfbs_4, proximal_1, proximal_2, tss_1, 
     # tfbs_6, tfbs_7, ctcf_2, ctcf_3, tfbs_8 etc.
@@ -114,26 +117,23 @@ sub generate_stable_id_assignments {
 
 sub filter_for_compatible_overlaps {
 
-  my $bedfile_fh = shift;
-
+  my $all_overlaps_fh = shift;
+ 
   my @overlaps;
   my %overlaps_length;
 
-  my $all_overlaps = read_all_overlaps($bedfile_fh);
+  my $all_overlaps = read_all_overlaps( $all_overlaps_fh );
 
-  sub cmp_overlaps {
-      return $b->[12] <=> $a->[12];
-  }
-    
-  foreach my $overlap (sort cmp_overlaps @{$all_overlaps}) {
-  
-    my $overlap_length = $overlap->[12];
-    
+  foreach my $entry (sort { $b->[12] <=> $a->[12] } @{$all_overlaps}) {
+    my $overlap_length = $entry->[12];
+    my $regulatory_feature_type_old  = $entry->[4];
+
     if( ! exists ($overlaps_length{$regulatory_feature_type_old}) ) {
-      push @overlaps, $overlap;
+      push @overlaps, $entry;
       $overlaps_length{$regulatory_feature_type_old} = $overlap_length;
-    } elsif ( $overlaps_length{$regulatory_feature_type_old} lt $overlap_length) {
-      print "ERROR: The new entry has a longer overlap than the one already reported.\n";
+      #print "Looking at entry: @{$entry}\n";
+    } elsif ( $overlaps_length{$regulatory_feature_type_old} < $overlap_length) {
+      print "ERROR: The new entry has a longer overlap than the one already reported.\n@{$entry}\n";
     }
   }
   return ( \@overlaps );
@@ -157,6 +157,8 @@ sub find_max_seen_stable_id {
         $max_seen_stable_id_number = $regulatory_feature_old_stable_id_number;
     }
   }
+
+  print "The maximum stable id seen is: $max_seen_stable_id_number\n";
   return( $max_seen_stable_id_number );
 }
 
@@ -176,11 +178,11 @@ sub read_all_overlaps {
     if ($regulatory_feature_type_old eq $regulatory_feature_type_new) {
       # Feature types must be identical for transferring the stable id.
       
-      print "Compatible $current_bed_file_line\n";
+      #print "Compatible $current_bed_file_line\n";
       push @all_overlaps, \@bed_file_fields;
-    } else {
-      print "Not compatible $current_bed_file_line\n";
-    }
+    } #else {
+      #print "Not compatible $current_bed_file_line\n";
+    #}
   }
-  return( /@all_overlaps );
+  return( \@all_overlaps );
 }
