@@ -127,17 +127,13 @@ sub filter_for_compatible_overlaps {
     
   foreach my $overlap (sort cmp_overlaps @{$all_overlaps}) {
   
-    my $regulatory_feature_type_old  = $overlap->[3];
-    my $regulatory_feature_type_new  = $overlap->[9];
-    my $overlap_length               = $overlap->[12];
+    my $overlap_length = $overlap->[12];
     
-    if( (! exists ($overlaps_length{$regulatory_feature_type_old}) ) && $regulatory_feature_type_old eq $regulatory_feature_type_new) {
-      
-      print "Compatible     $current_bed_file_line\n";
-      push @overlaps, \@bed_file_fields;
+    if( ! exists ($overlaps_length{$regulatory_feature_type_old}) ) {
+      push @overlaps, $overlap;
       $overlaps_length{$regulatory_feature_type_old} = $overlap_length;
-    } else {
-      print "Not compatible $current_bed_file_line\n";
+    } elsif ( $overlaps_length{$regulatory_feature_type_old} lt $overlap_length)
+      print "ERROR: The new entry has a longer overlap than the one already reported.\n";
     }
   }
   return ( \@overlaps );
@@ -171,12 +167,20 @@ sub read_all_overlaps {
 
   while (my $current_bed_file_line = <$bedfile_fh>) {
         
-  chomp $current_bed_file_line;
-  my @bed_file_fields = split "\t", $current_bed_file_line;
-        
-  # Feature types must be identical for transferring the stable id.
-  #
-  push @all_overlaps, \@bed_file_fields;
+    chomp $current_bed_file_line;
+    my @bed_file_fields = split "\t", $current_bed_file_line;
+    
+    my $regulatory_feature_type_old  = $bed_file_fields[3];
+    my $regulatory_feature_type_new  = $bed_file_fields[9];
+      
+    if ($regulatory_feature_type_old eq $regulatory_feature_type_new) {
+      # Feature types must be identical for transferring the stable id.
+      
+      print "Compatible $current_bed_file_line\n";
+      push @all_overlaps, \@bed_file_fields;
+    } else {
+      print "Not compatible $current_bed_file_line\n";
+    }
 
-  return(/@all_overlaps);
+  return( /@all_overlaps );
 }
